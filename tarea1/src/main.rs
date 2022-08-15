@@ -1,3 +1,13 @@
+/*  Estudiante y autor: Pablo Muñoz Hidalgo
+    Carnet: 2020031899
+    Profesor: Kevin Moraga García 
+    Materia: Sistemas Operativos
+    Grupo: 20
+    Universidad: ITCR
+    Año: 2022
+ */
+
+//Modulos y bibliotecas a usar
 mod system_call_names;
 
 use linux_personality::personality;
@@ -112,6 +122,7 @@ fn rastrear_con_pausa(child: Pid) {
     loop {
         wait().unwrap();
         //Usa ptrace para recoger la informacion del hijo e imprimirla al usuario
+        //para contar los syscalls usar ptrace y sus getters.
         match ptrace::getregs(child) {
             Ok(x) => println!(
                 "{:?} {:?}",
