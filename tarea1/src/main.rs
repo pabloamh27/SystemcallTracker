@@ -7,9 +7,6 @@
     Año: 2022
  */
 
-//Pendientes:
-//1. Implementar contador de syscalls
-
 //Modulos y bibliotecas a usar
 mod system_call_names;
 use linux_personality::personality;
@@ -38,12 +35,12 @@ fn menu (mut argumentos : Vec<String>) {
     }
     //Verifica que el usuario haya ingresado una opcion de rastreador válida
     if argumentos [1] == "-v"{
-        rastreador(&argumentos [2], &argumentos [3]);
+        rastreador(&argumentos [2], argumentos_comando(argumentos.to_vec()));
         exit(1);
     }
     //Verifica que el usuario haya ingresado una opcion de rastreador válida
     if argumentos [1] == "-V" {
-        rastreador_con_pausa(&argumentos [2], &argumentos [3]);
+        rastreador_con_pausa(&argumentos [2], argumentos_comando(argumentos.to_vec()));
         exit(1);
     }
     //Error en caso de que el usuario no ingrese una opcion de rastreador válida
@@ -54,13 +51,25 @@ fn menu (mut argumentos : Vec<String>) {
 
 }
 
+
+fn argumentos_comando (argumentos : Vec<String>) -> Vec<String> {
+    let mut argumentos_comando : Vec<String> = Vec::new();
+    for i in 3..argumentos.len() {
+        argumentos_comando.push(argumentos [i].to_string());
+    }
+    for i in 0..argumentos_comando.len() {
+        print!("{:?} ", argumentos_comando[i]);
+    }
+    return argumentos_comando;
+}
+
 //Funcion que ejecuta el rastreador
-fn rastreador(system_call_name: &String, argumentos_prog: &String) {
+fn rastreador(system_call_name: &String, argumentos_prog: Vec<String>) {
     match unsafe { fork() } {
         //Si el fork es exitoso, ejecuta el hijo
         Ok(ForkResult::Child) => {
             //Ejecuta el hijo
-            ejecutar_hijo(&system_call_name, &argumentos_prog);
+            ejecutar_hijo(&system_call_name, argumentos_prog);
         }
         //Empieza a sacar informacion del hijo y la muestra al usuario
         Ok(ForkResult::Parent { child }) => {
@@ -78,12 +87,12 @@ fn rastreador(system_call_name: &String, argumentos_prog: &String) {
 }
 
 //Funcion que ejecuta el rastreador con pausa
-fn rastreador_con_pausa(system_call_name: &String, argumentos_prog: &String) {
+fn rastreador_con_pausa(system_call_name: &String, argumentos_prog: Vec<String>) {
     match unsafe { fork() } {
         //Si el fork es exitoso, ejecuta el hijo
         Ok(ForkResult::Child) => {
             //Ejecuta el hijo
-            ejecutar_hijo(&system_call_name, &argumentos_prog);
+            ejecutar_hijo(&system_call_name, argumentos_prog);
         }
         //Empieza a sacar informacion del hijo y la muestra al usuario
         Ok(ForkResult::Parent { child }) => {
@@ -165,11 +174,11 @@ fn rastrear_con_pausa(child: Pid) ->  Vec<(String, i128)>{
 }
 
 //Funcion que ejecuta el hijo
-fn ejecutar_hijo(system_call_name: &String, argumentos_prog: &String) {
+fn ejecutar_hijo(system_call_name: &String, argumentos_prog: Vec<String>) {
     ptrace::traceme().unwrap();
     //Ejecuta el programa que el usuario ingreso
     personality(linux_personality::ADDR_NO_RANDOMIZE).unwrap();
-    Command::new(system_call_name).arg(argumentos_prog).exec();
+    Command::new(system_call_name).args(argumentos_prog).exec();
 
     exit(0)
 }
@@ -206,6 +215,7 @@ fn continuar () {
     let stdout = io::stdout();
     let mut reader = io::stdin();
     let mut buffer = [0;1]; 
+    //Espera input del usuario para continuar con el rastreo
     print!("Presione cualquier tecla para continuar... \n");
     stdout.lock().flush().unwrap();
     reader.read_exact(&mut buffer).unwrap();
