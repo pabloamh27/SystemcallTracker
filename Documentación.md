@@ -48,8 +48,9 @@ Ejemplo de linea a ejecutar "rastreador -v ls /home/user/Desktop/"
 |14/08/2022|9:30 PM|11:00 PM|Hacer comprobaciones necesarias para el corrido del programa, el programa funciona sin argumentos en el "Prog"|
 |15/08/2022|8:00 AM|10:00 AM|Se logró pasar argumentos al comando y se trabajó en las opciones de rastreador|
 |15/08/2022|2:00 PM|5:00 PM|Se implementa el continuar presionando cualquier botón y se cuentan los syscalls de cada tipo, se suman y se imprimen en pantalla|
-|15/08/2022|5:15 PM|8:30 PM|Release final con todo funcionando como lo solicita la especificacion|
-|16/08/2022|9:15 AM|11:00 AM|Refinar detalles, comentar el codigo y terminar la documentación|
+|15/08/2022|5:00 PM|8:30 PM|Release final con todo funcionando como lo solicita la especificacion|
+|16/08/2022|9:00 AM|11:30 AM|Refinar detalles, comentar el codigo y terminar la documentación|
+### Horas totales: 21 horas
 
 ## Autoevaluación:
 ### Estado del programa
@@ -66,7 +67,13 @@ También un problema que surjió fue a la hora de contar los syscalls, a pesar d
 
 ### Reporte de commits:
 
-commit 2de455702ccf97f5bf972b95f23708dac3487c46 (HEAD -> main, origin/main, origin/HEAD)
+commit 7c402a74515e9358e8005966bb0b8f2f361b68e8 (HEAD -> main, origin/main, origin/HEAD)
+Author: Pablo Munoz Hidalgo <53487847+Litecore50@users.noreply.github.com>
+Date:   Tue Aug 16 11:17:11 2022 -0600
+
+    Octavo Avance v1.3 Final :)
+
+commit 2de455702ccf97f5bf972b95f23708dac3487c46
 Author: Pablo Munoz Hidalgo <53487847+Litecore50@users.noreply.github.com>
 Date:   Tue Aug 16 10:56:29 2022 -0600
 
@@ -135,7 +142,7 @@ Date:   Sun Aug 14 19:36:53 2022 -0600
 
 
 ## Lecciones Aprendidas:
-En esta tarea se aprendió el funcionamiento de los "syscalls" y como se comportan estos a la hora de ejecutar un programa, además de aprender lo básico sobre estos también se sacó provecho del lenguaje Rust, un lenguaje útil e intuitivo teniendo en cuenta experiencias pasadas con C y Java. Por último se aprecia mucho la aplicación de los conocimientos adquiridos en las lecturas, ya que muchas veces esto se queda en teoría pero con esta tarea todo pasó a la parte práctica y es muy satisfactorio haberla finalizado exitosamente.
+En esta tarea se aprendió el funcionamiento de los "syscalls" y como se comportan estos a la hora de ejecutar un programa, además de aprender lo básico sobre estos también se sacó provecho del lenguaje Rust, un lenguaje útil e intuitivo teniendo en cuenta experiencias pasadas con C y Java. Por último se aprecia mucho la aplicación de los conocimientos adquiridos en las lecturas, ya que muchas veces esto se queda en teoría pero con esta tarea todo pasó a la parte práctica y es muy satisfactorio haberla finalizado exitosamente. 
 
 
 ## Bibliografía:
