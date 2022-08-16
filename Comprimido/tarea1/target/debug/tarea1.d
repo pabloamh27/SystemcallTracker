@@ -1,0 +1,1 @@
+/home/pablo/Desktop/Trabajos\ SO/TareaRust/tarea1/target/debug/tarea1: /home/pablo/Desktop/Trabajos\ SO/TareaRust/tarea1/src/main.rs /home/pablo/Desktop/Trabajos\ SO/TareaRust/tarea1/src/nombres_syscalls.rs
