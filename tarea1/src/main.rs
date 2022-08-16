@@ -5,7 +5,7 @@
     Grupo: 20
     Universidad: ITCR
     Año: 2022
- */
+*/
 
 //Modulos y bibliotecas a usar
 mod nombres_syscalls;
@@ -21,8 +21,14 @@ use nix::unistd::{fork, ForkResult, Pid};
 use std::process::{exit, Command};
 use std::io::{self, stdin};
 
-//Este es el menú de opciones que se muestra al usuario y comprueba que los inputs estén bien escritos
-fn menu (mut argumentos : Vec<String>) {
+/*
+FUNCION:
+    Funcion que se encarga de ejecutar la syscall que se le pasa por parametro
+    y retorna el valor de la syscall.
+PARAMETROS:
+    argumentos: Vec<String> -> Vector de argumentos que se le pasan a la syscall
+*/
+fn comprobador (mut argumentos : Vec<String>) {
 
     //Condicional para verificar que el usuario ingrese "rastreador" como primer instrucción
     if argumentos [0] != "rastreador" {
@@ -52,7 +58,14 @@ fn menu (mut argumentos : Vec<String>) {
 
 }
 
-//Funcion que se encarga de convertir los argumentos de Prog en un vector de strings
+/*FUNCION:
+    Esta funcion se encarga de convertir los argumentos de la función menu a un vector de strings
+    que contiene los argumentos del comando que se ejecutará.
+    PARAMETROS:
+        Vec<String> -> Vector de strings que contiene los argumentos del comando que se ejecutará
+    Retorno:
+        Vec<String> -> Vector de strings que contiene los argumentos del comando que se ejecutará
+*/
 fn argumentos_comando (argumentos : Vec<String>) -> Vec<String> {
     let mut argumentos_comando : Vec<String> = Vec::new();
     for i in 3..argumentos.len() {
@@ -61,70 +74,88 @@ fn argumentos_comando (argumentos : Vec<String>) -> Vec<String> {
     return argumentos_comando;
 }
 
-//Funcion que ejecuta el rastreador
-fn rastreador(system_call_name: &String, argumentos_prog: Vec<String>) {
+/*FUNCION:
+    Funcion que ejecuta el rastreador con la opcion -v
+PARAMETROS:
+    prog: String -> Nombre del syscall a rastrear
+    argumentos_prog: Vec<String> -> Vector de argumentos del programa a ejecutar
+*/
+fn rastreador(prog: &String, argumentos_prog: Vec<String>) {
     match unsafe {fork()} 
     {
         //Si el fork es exitoso, ejecuta el hijo
         Ok(ForkResult::Child) => {
             //Ejecuta el hijo
-            ejecutar_hijo(&system_call_name, argumentos_prog);
+            ejecutar_programa(&prog, argumentos_prog);
         }
         //Empieza a sacar informacion del hijo y la muestra al usuario
         Ok(ForkResult::Parent { child }) => {
             let vector_syscalls = rastrear(child);
-            print!("\n\nLa cantidad de syscalls utilizados por cada uno son: \n");
+            println!("\n\nLa cantidad de syscalls utilizados por cada uno son: \n");
             for i in 0..vector_syscalls.len() {
                 println!("Nombre del syscall: {:?} \nCantidad: {:?}", vector_syscalls[i].0, vector_syscalls[i].1);
             }
         }
         //Error en caso de que el fork falle
         Err(err) => {
-            print!("El fork ha fallado! {}", err);
+            println!("El fork ha fallado! {}", err);
             exit(1);
         }
     }
 }
 
-//Funcion que ejecuta el rastreador con pausa
-fn rastreador_con_pausa(system_call_name: &String, argumentos_prog: Vec<String>) {
+/*
+FUNCION:
+    Funcion que ejecuta el rastreador con pausa usando la opcion -V
+PARAMETROS:
+    prog: String -> Nombre del syscall a rastrear
+    argumentos_prog: Vec<String> -> Vector de argumentos del programa a ejecutar
+*/
+fn rastreador_con_pausa(prog: &String, argumentos_prog: Vec<String>) {
     match unsafe {fork()} 
     {
         //Si el fork es exitoso, ejecuta el hijo
         Ok(ForkResult::Child) => {
-            //Ejecuta el hijo
-            ejecutar_hijo(&system_call_name, argumentos_prog);
+            //Ejecuta el programa
+            ejecutar_programa(&prog, argumentos_prog);
         }
         //Empieza a sacar informacion del hijo y la muestra al usuario
         Ok(ForkResult::Parent { child }) => {
             let vector_syscalls = rastrear_con_pausa(child);
-            print!("\n\nLa cantidad de syscalls utilizados por cada uno son: \n");
+            println!("\n\nLa cantidad de syscalls utilizados por cada uno son: \n");
             for i in 0..vector_syscalls.len() {
                 println!("Nombre del syscall: {:?} \nCantidad: {:?}", vector_syscalls[i].0, vector_syscalls[i].1);
             }
         }
         //Error en caso de que el fork falle
         Err(err) => {
-            print!("El fork ha fallado! {}", err);
+            println!("El fork ha fallado! {}", err);
             exit(1);
         }
     }
 }
 
-//Rastrea e imprime la informacion del hijo
-fn rastrear(child: Pid) -> Vec<(String, i128)>{
+/*
+FUNCION:
+    Funcion que ejecuta el hijo y lo rastrea
+PARAMETROS:
+    child: Pid -> Pid del hijo
+Retorno:
+    Vec<(String, i128)> -> Vector de pares de strings y enteros que contiene el nombre del syscall y la cantidad de veces que se ha utilizado
+*/
+fn rastrear(id_hijo: Pid) -> Vec<(String, i128)>{
     let mut vec_syscalls: Vec<(String, i128)> = Vec::new();
     loop {
         wait().unwrap();
         //Usa ptrace para enviar la informacion del hijo al vector de syscalls
-        match ptrace::getregs(child) {
+        match ptrace::getregs(id_hijo) {
             Ok(regs) => {
                 vec_syscalls = contador_syscalls(nombres_syscalls::NOMBRES_SYSCALLS[(regs.orig_rax) as usize], &mut vec_syscalls);
             }    
             Err(_) => break,
         }
         //Usa ptrace para recoger la informacion del hijo e imprimirla al usuario
-        match ptrace::getregs(child) {
+        match ptrace::getregs(id_hijo) {
             Ok(x) => println!("
             \nNombre del syscall: {:?} 
             \nNúmero de syscall: {:?}
@@ -139,7 +170,7 @@ fn rastrear(child: Pid) -> Vec<(String, i128)>{
             Err(_) => break,
         };
         //Usa ptrace para detener el hijo
-        match ptrace::syscall(child, None) {
+        match ptrace::syscall(id_hijo, None) {
             Ok(_) => continue,
             Err(_) => break,
         }
@@ -149,20 +180,27 @@ fn rastrear(child: Pid) -> Vec<(String, i128)>{
 
 
 
-//Rastrea e imprime la informacion del hijo con pausa
-fn rastrear_con_pausa(child: Pid) ->  Vec<(String, i128)>{
+/*
+FUNCION:
+    Funcion que ejecuta el hijo y lo rastrea con pausas implementando la funcion "continuar()"
+PARAMETROS:
+    child: Pid -> Pid del hijo
+Retorno:
+    Vec<(String, i128)> -> Vector de pares de strings y enteros que contiene el nombre del syscall y la cantidad de veces que se ha utilizado
+*/
+fn rastrear_con_pausa(id_hijo: Pid) ->  Vec<(String, i128)>{
     let mut vec_syscalls: Vec<(String, i128)> = Vec::new();
     loop {
         wait().unwrap();
         //Usa ptrace para enviar la informacion del hijo al vector de syscalls
-        match ptrace::getregs(child) {
+        match ptrace::getregs(id_hijo) {
             Ok(regs) => {
                 vec_syscalls = contador_syscalls(nombres_syscalls::NOMBRES_SYSCALLS[(regs.orig_rax) as usize], &mut vec_syscalls);
             }    
             Err(_) => break,
         }
         //Usa ptrace para recoger la informacion del hijo e imprimirla al usuario
-        match ptrace::getregs(child) {
+        match ptrace::getregs(id_hijo) {
             Ok(x) => println!("
             \nNombre del syscall: {:?} 
             \nNúmero de syscall: {:?}
@@ -177,9 +215,9 @@ fn rastrear_con_pausa(child: Pid) ->  Vec<(String, i128)>{
             Err(_) => break,
         };
         //Espera input del usuario para continuar con el rastreo
-        continuar();
+        pausa();
         //Usa ptrace para detener el hijo
-        match ptrace::syscall(child, None) {
+        match ptrace::syscall(id_hijo, None) {
             Ok(_) => continue,
             Err(_) => break,
         }
@@ -187,16 +225,27 @@ fn rastrear_con_pausa(child: Pid) ->  Vec<(String, i128)>{
     return vec_syscalls.to_vec();
 }
 
-//Funcion que ejecuta el hijo
-fn ejecutar_hijo(system_call_name: &String, argumentos_prog: Vec<String>) {
+/*
+FUNCION:
+    Funcion que ejecuta el hijo y ejecuta el programa pasado por parametro
+*/
+fn ejecutar_programa(prog: &String, argumentos_prog: Vec<String>) {
     ptrace::traceme().unwrap();
     //Ejecuta el programa que el usuario ingreso
     personality(linux_personality::ADDR_NO_RANDOMIZE).unwrap();
-    Command::new(system_call_name).args(argumentos_prog).exec();
+    Command::new(prog).args(argumentos_prog).exec();
     exit(0)
 }
 
-//Cuenta los syscalls iguales y los va sumando
+/*
+FUNCION:
+    Funcion que contabiliza la cantidad de veces que se ha utilizado un syscall
+PARAMETROS:
+    syscall: String -> Nombre del syscall
+    vector_syscalls: Vec<(String, i128)> -> Vector de pares de strings y enteros que contiene el nombre del syscall y la cantidad de veces que se ha utilizado
+Retorno:
+    Vec<(String, i128)> -> Vector de pares de strings y enteros que contiene el nombre del syscall y la cantidad de veces que se ha utilizado
+*/
 fn contador_syscalls(syscall: &str, vector_syscalls: &mut Vec<(String, i128)>)  -> Vec<(String, i128)> {
     let mut contador: i128 = 0;
     //Recorre el vector de syscalls
@@ -218,8 +267,12 @@ fn contador_syscalls(syscall: &str, vector_syscalls: &mut Vec<(String, i128)>)  
     return vec_syscalls;
 }
 
-//Funcion que espera input del usuario para continuar con el rastreo
-fn continuar () {
+
+/*
+FUNCION:
+    Funcion que espera input del usuario para continuar con el rastreo
+*/
+fn pausa() {
     let stdin = 0;
     let termios = Termios::from_fd(stdin).unwrap();
     let mut new_termios = termios.clone();  // Clono la configuración original para luego restablecerlo para la siguiente ejecucion
@@ -229,7 +282,7 @@ fn continuar () {
     let mut reader = io::stdin();
     let mut buffer = [0;1]; 
     //Espera input del usuario para continuar con el rastreo
-    print!("Presione cualquier tecla para continuar... \n");
+    println!("Presione cualquier tecla para continuar... \n");
     stdout.lock().flush().unwrap();
     reader.read_exact(&mut buffer).unwrap();
     tcsetattr(stdin, TCSANOW, & termios).unwrap(); // Restablezco la configuración original
@@ -240,9 +293,10 @@ fn continuar () {
 fn main() {
     //Recibe el input del usuario y lo guarda en una variable de tipo String para poder usarlo en el siguiente paso
     let mut input = String::new();
-    println!("Bienvenido al rastreador, ingrese su comando de la forma: rastreador <argumento> <Prog> <argumento_de_Prog>: ");
+    println!("Bienvenido al rastreador, ingrese su comando de la forma: rastreador <opcion de rastreador> <programa a ejecutar> <argumentos para el programa>: ");
     stdin().read_line(&mut input).unwrap();
     let argumentos: Vec<String> = input.split_whitespace().map(str::to_string).collect();
-    menu(argumentos);
+    //Llama al menu de opciones
+    comprobador(argumentos);
 
 }
