@@ -8,17 +8,18 @@
  */
 
 //Modulos y bibliotecas a usar
-mod system_call_names;
+mod nombres_syscalls;
+
+use std::io::Read;
+use nix::sys::wait::wait;
 use linux_personality::personality;
 use nix::sys::ptrace;
-use nix::sys::wait::wait;
-use nix::unistd::{fork, ForkResult, Pid};
 use std::os::unix::process::CommandExt;
-use std::process::{exit, Command};
-use std::io::{self, stdin};
-use std::io::Read;
 use std::io::Write;
 use termios::{Termios, TCSANOW, ECHO, ICANON, tcsetattr};
+use nix::unistd::{fork, ForkResult, Pid};
+use std::process::{exit, Command};
+use std::io::{self, stdin};
 
 //Este es el menú de opciones que se muestra al usuario y comprueba que los inputs estén bien escritos
 fn menu (mut argumentos : Vec<String>) {
@@ -51,21 +52,19 @@ fn menu (mut argumentos : Vec<String>) {
 
 }
 
-
+//Funcion que se encarga de convertir los argumentos de Prog en un vector de strings
 fn argumentos_comando (argumentos : Vec<String>) -> Vec<String> {
     let mut argumentos_comando : Vec<String> = Vec::new();
     for i in 3..argumentos.len() {
         argumentos_comando.push(argumentos [i].to_string());
-    }
-    for i in 0..argumentos_comando.len() {
-        print!("{:?} ", argumentos_comando[i]);
     }
     return argumentos_comando;
 }
 
 //Funcion que ejecuta el rastreador
 fn rastreador(system_call_name: &String, argumentos_prog: Vec<String>) {
-    match unsafe { fork() } {
+    match unsafe {fork()} 
+    {
         //Si el fork es exitoso, ejecuta el hijo
         Ok(ForkResult::Child) => {
             //Ejecuta el hijo
@@ -74,21 +73,23 @@ fn rastreador(system_call_name: &String, argumentos_prog: Vec<String>) {
         //Empieza a sacar informacion del hijo y la muestra al usuario
         Ok(ForkResult::Parent { child }) => {
             let vector_syscalls = rastrear(child);
-            print!("La cantidad de syscalls utilizados por cada uno son: \n");
+            print!("\n\nLa cantidad de syscalls utilizados por cada uno son: \n");
             for i in 0..vector_syscalls.len() {
-                println!("{:?} {:?}", vector_syscalls[i].0, vector_syscalls[i].1);
+                println!("Nombre del syscall: {:?} \nCantidad: {:?}", vector_syscalls[i].0, vector_syscalls[i].1);
             }
         }
         //Error en caso de que el fork falle
         Err(err) => {
-            panic!("El fork ha fallado! {}", err);
+            print!("El fork ha fallado! {}", err);
+            exit(1);
         }
     }
 }
 
 //Funcion que ejecuta el rastreador con pausa
 fn rastreador_con_pausa(system_call_name: &String, argumentos_prog: Vec<String>) {
-    match unsafe { fork() } {
+    match unsafe {fork()} 
+    {
         //Si el fork es exitoso, ejecuta el hijo
         Ok(ForkResult::Child) => {
             //Ejecuta el hijo
@@ -97,14 +98,15 @@ fn rastreador_con_pausa(system_call_name: &String, argumentos_prog: Vec<String>)
         //Empieza a sacar informacion del hijo y la muestra al usuario
         Ok(ForkResult::Parent { child }) => {
             let vector_syscalls = rastrear_con_pausa(child);
-            print!("La cantidad de syscalls utilizados por cada uno son: \n");
+            print!("\n\nLa cantidad de syscalls utilizados por cada uno son: \n");
             for i in 0..vector_syscalls.len() {
-                println!("{:?} {:?}", vector_syscalls[i].0, vector_syscalls[i].1);
+                println!("Nombre del syscall: {:?} \nCantidad: {:?}", vector_syscalls[i].0, vector_syscalls[i].1);
             }
         }
         //Error en caso de que el fork falle
         Err(err) => {
-            panic!("El fork ha fallado! {}", err);
+            print!("El fork ha fallado! {}", err);
+            exit(1);
         }
     }
 }
@@ -117,15 +119,21 @@ fn rastrear(child: Pid) -> Vec<(String, i128)>{
         //Usa ptrace para enviar la informacion del hijo al vector de syscalls
         match ptrace::getregs(child) {
             Ok(regs) => {
-                vec_syscalls = contador_syscalls(system_call_names::SYSTEM_CALL_NAMES[(regs.orig_rax) as usize], &mut vec_syscalls);
+                vec_syscalls = contador_syscalls(nombres_syscalls::NOMBRES_SYSCALLS[(regs.orig_rax) as usize], &mut vec_syscalls);
             }    
             Err(_) => break,
         }
         //Usa ptrace para recoger la informacion del hijo e imprimirla al usuario
         match ptrace::getregs(child) {
-            Ok(x) => println!(
-                "\n{:?} {:?}",
-                system_call_names::SYSTEM_CALL_NAMES[(x.orig_rax) as usize],
+            Ok(x) => println!("
+            \nNombre del syscall: {:?} 
+            \nNúmero de syscall: {:?}
+            \nValor de retorno: {:?}
+            \nDetalles en crudo: {:?}
+            \n=======================================================",
+                nombres_syscalls::NOMBRES_SYSCALLS[(x.orig_rax) as usize],
+                x.orig_rax,
+                x.rax,
                 x
             ),
             Err(_) => break,
@@ -149,15 +157,21 @@ fn rastrear_con_pausa(child: Pid) ->  Vec<(String, i128)>{
         //Usa ptrace para enviar la informacion del hijo al vector de syscalls
         match ptrace::getregs(child) {
             Ok(regs) => {
-                vec_syscalls = contador_syscalls(system_call_names::SYSTEM_CALL_NAMES[(regs.orig_rax) as usize], &mut vec_syscalls);
+                vec_syscalls = contador_syscalls(nombres_syscalls::NOMBRES_SYSCALLS[(regs.orig_rax) as usize], &mut vec_syscalls);
             }    
             Err(_) => break,
         }
         //Usa ptrace para recoger la informacion del hijo e imprimirla al usuario
         match ptrace::getregs(child) {
-            Ok(x) => println!(
-                "{:?} {:?}",
-                system_call_names::SYSTEM_CALL_NAMES[(x.orig_rax) as usize],
+            Ok(x) => println!("
+            \nNombre del syscall: {:?} 
+            \nNúmero de syscall: {:?}
+            \nValor de retorno: {:?}
+            \nDetalles en crudo: {:?}
+            \n=======================================================",
+                nombres_syscalls::NOMBRES_SYSCALLS[(x.orig_rax) as usize],
+                x.orig_rax,
+                x.rax,
                 x
             ),
             Err(_) => break,
@@ -179,7 +193,6 @@ fn ejecutar_hijo(system_call_name: &String, argumentos_prog: Vec<String>) {
     //Ejecuta el programa que el usuario ingreso
     personality(linux_personality::ADDR_NO_RANDOMIZE).unwrap();
     Command::new(system_call_name).args(argumentos_prog).exec();
-
     exit(0)
 }
 
